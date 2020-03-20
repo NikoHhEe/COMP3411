@@ -46,37 +46,45 @@ log_table([Head|Tail], [[Head,Log]|ResultTail]) :-
 %         sequence of consecutive even or odd numbers within the
 %         original list
 
-% Base case 1: empty list
-paruns([], []).
-% base case 2: list with only one number
-paruns([Num], [[Num]]).
-% otherwise
-% if head of List and head of head list in RunList have the
-% same parity, insert the head to the start of the head list 
-% in RunList (using headInsert)
-paruns([Head|Tail], [[SubHead|SubTail]|RunTail]) :- 
-    paruns(Tail, [[SubHead1|SubTail1]|RunTail]),
-    same(Head, SubHead1),
-    headInsert(Head, [SubHead1|SubTail1], [SubHead|SubTail]).
+% base case: empty list, just return empty list
+paruns([],[]).
+paruns([Head|Tail], RunList) :-
+    odd_even([Head|Tail], OddList, EvenList),
+    merge(OddList, EvenList, Head, RunList).
 
-% if head of List and head of head list in RunList have
-% different parity, create a new list containing only 
-% head of List, and insert the [Head] list to the start
-% of the RunList (using headInsert)
-paruns([Head|Tail], [[SubHead|SubTail]|RunTail]) :-
-    paruns(Tail, [[SubHead1|SubTail1]|RunTail1]),
-    \+ same(Head, SubHead1),
-    headInsert([Head], [[SubHead1|SubTail1]|RunTail1], [[SubHead|SubTail]|RunTail]).
+% odd_even(List, OddList, EvenList)
+% divide the list into a list of odd lists and a list of even lists
+% e.g. odd_even([8,0,4,3,7,2,-1,9,9], [[3,7],[-1,9,9]], [[8,0,4],[2]])
+odd_even([Head], [[Head]], []) :- odd(Head).
+odd_even([Head], [], [[Head]]) :- even(Head).
+odd_even([Fst,Snd|Tail], [[Fst|OddTail1]|OddTail], EvenList) :- 
+    odd(Fst), odd(Snd),
+    odd_even([Snd|Tail], [OddTail1|OddTail], EvenList).
+odd_even([Fst,Snd|Tail], OddList, [[Fst|EvenTail1]|EvenTail]) :- 
+    even(Fst), even(Snd),
+    odd_even([Snd|Tail], OddList, [EvenTail1|EvenTail]).
+odd_even([Fst,Snd|Tail], OddList, [[Fst]|EvenTail]) :- 
+    even(Fst), odd(Snd),
+    odd_even([Snd|Tail], OddList, EvenTail).
+odd_even([Fst,Snd|Tail], [[Fst]|OddTail], EvenList) :-
+    odd(Fst), even(Snd),
+    odd_even([Snd|Tail], OddTail, EvenList).
 
-% helper predicates to determine the parity
+% merge(OddList, EvenList, Head, RunList)
+% merge the odd lists and even lists 
+% e.g. merge([[3,7],[-1,9,9]], [[8,0,4],[2]], 8, [[8, 0, 4], [3, 7], [2], [-1, 9, 9]])
+merge(List, [], _,List).
+merge([], List, _,List).
+merge([H1|T1], [H2|T2], Head, [H1,H2|RunList]) :-
+    odd(Head),      % if head of list is odd, merge the OddList first
+    merge(T1, T2, Head, RunList).
+merge([H1|T1], [H2|T2], Head, [H2,H1|RunList]) :-
+    even(Head),     % if head of list is even, merge the EvenList first
+    merge(T1, T2, Head, RunList).
+
+% helper predicate to indicate parity
 odd(Num) :- integer(Num), 1 is Num mod 2.
 even(Num) :- integer(Num), 0 is Num mod 2.
-same(Num1, Num2) :- odd(Num1), odd(Num2).
-same(Num1, Num2) :- even(Num1), even(Num2).
-
-% helper predicates to insert a node to the start of a list
-headInsert(NewHead, [], [NewHead]).
-headInsert(NewHead, [Head|Tail], [NewHead, Head|Tail]).
 
 
 
@@ -84,10 +92,7 @@ headInsert(NewHead, [Head|Tail], [NewHead, Head|Tail]).
 % Expr: an arithmetic expression written in prefix format
 % Val: the final value of the expression
 
-% Base case 1: an atomic number 
-eval(Num, Num) :- number(Num).
 % Base case 2: operation on two atomic numbers
-
 % addition
 eval(add(Num1, Num2), Result) :- 
     number(Num1), number(Num2), 
@@ -106,29 +111,27 @@ eval(div(Num1, Num2), Result) :-
     Result is Num1 / Num2.
 
 % expressions contains other expressions (not atomic)
-% eval(Expr, Result) :-
-%     Expr =.. [Op,Arg1,Arg2|_],
-%     eval(Expr1, Expr2, Result1, Result2),
-%     eval(Op(Result1, Result2), Result).
-
 % addition
 eval(add(Expr1, Expr2), Result) :-
-    eval(Expr1, Expr2, Result1, Result2),
+    evalEE(Expr1, Expr2, Result1, Result2),
     eval(add(Result1, Result2), Result).
 % subtraction
 eval(sub(Expr1, Expr2), Result) :-
-    eval(Expr1, Expr2, Result1, Result2),
+    evalEE(Expr1, Expr2, Result1, Result2),
     eval(sub(Result1, Result2), Result).
 % multiplication
 eval(mul(Expr1, Expr2), Result) :-
-    eval(Expr1, Expr2, Result1, Result2),
+    evalEE(Expr1, Expr2, Result1, Result2),
     eval(mul(Result1, Result2), Result).
 % division
 eval(div(Expr1, Expr2), Result) :-
-    eval(Expr1, Expr2, Result1, Result2),
+    evalEE(Expr1, Expr2, Result1, Result2),
     eval(div(Result1, Result2), Result).
 
+% Base case 1: an atomic number 
+eval(Num, Num) :- number(Num).
+
 % helper predicate to simplify the code 
-eval(Expr1, Expr2, Result1, Result2) :-
+evalEE(Expr1, Expr2, Result1, Result2) :-
     eval(Expr1, Result1),
     eval(Expr2, Result2).
