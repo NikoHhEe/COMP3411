@@ -161,21 +161,34 @@ process(event(Action, [actor(Actor), object(Object)]), Ref1, Ref3) :-
     event_assert(event(Action, [actor(Actor), object(Object)])).
     % X = new reference
     % append(Ref1, [X], Ref2), 
-process_actor(thing(Name, Props), _, _) :- 
-    thing_assert(thing(Name, Props)).
+process_actor(thing(Name, []), _, _) :- 
+    thing_assert(thing(Name, [])).
+process_actor(set(Actor1, Actor2), _, _) :- 
+    process_actor(Actor1, _, _),
+    process_actor(Actor2, _, _),
+    asserta(history(set(Actor1, Actor2))).
+process_actor(personal(Pronoun), Ref1, Ref2) :-
+    personal(Pronoun, Props1),
+    member(number(plural), Props1),
+    history(set(Thing1, Thing2)),
+    append_set(Thing1, Thing2, [], RefSet),
+    append(Ref1, [RefSet], Ref2).
 process_actor(personal(Pronoun), Ref1, Ref2) :-
     search_personal(Pronoun, Ref1, Ref2).
 process_actor(possessive(PPronoun, Actor), Ref1, Ref2) :-
     search_possessive(PPronoun, Ref1, Ref2),
     process_actor(Actor, Ref1, Ref2).
 
-process_object(thing(Name, Props), _, _) :- 
-    thing_assert(thing(Name, Props)).
+process_object(thing(Name, []), _, _) :- 
+    thing_assert(thing(Name, [])).
+process_object(thing(Name, [object(Object)]), _, _) :- 
+    thing_assert(thing(Name, _)),
+    process_object(Object, _, _).
 process_object(personal(Pronoun), Ref1, Ref2) :-
     search_personal(Pronoun, Ref1, Ref2).
 process_object(possessive(PPronoun, Object), Ref1, Ref2) :-
     search_possessive(PPronoun, Ref1, Ref2),
-    process_actor(Object, Ref1, Ref2).
+    process_object(Object, Ref1, Ref2).
 
 thing_assert(thing(Name,_)) :-
     thing(Name, Props),
@@ -183,29 +196,34 @@ thing_assert(thing(Name,_)) :-
 
 event_assert(Event) :-
     assert(history(Event)).
-% event_assert(event(Action, _), Actor, Object) :-
-%     event(Action, [actor(_), object(_), tense(_), number(_)]),
-%     assert(history(event(Action, [actor(Actor), object(Object)]))).
 
 search_personal(Pronoun, Ref1, Ref2) :-
     personal(Pronoun, Props1),
-    member(gender(Gender), Props1),
-    member(number(Number), Props1),
-    history(thing(Ref, Props2)),
-    member(gender(Gender), Props2),
-    member(number(Number), Props2),
-    append(Ref1, [Ref], Ref2).
-    % writeln(Ref1),
-    % writeln(Ref2).
+    search_append(Props1, Ref1, Ref2).
 
 search_possessive(Pronoun, Ref1, Ref2) :-
     possessive(Pronoun, Props1),
+    search_append(Props1, Ref1, Ref2).
+
+search_append(Props1, Ref1, Ref2) :-
     member(gender(Gender), Props1),
     member(number(Number), Props1),
     history(thing(Ref, Props2)),
     member(gender(Gender), Props2),
     member(number(Number), Props2),
     append(Ref1, [Ref], Ref2).
+
+append_set(thing(Name1, _), thing(Name2, _), Ref, RefSet) :-
+    append(Ref, [Name1, Name2], RefSet).
+append_set(thing(Name1, _), set(Thing1, Thing2), Ref, RefSet) :-
+    append(Ref, [Name1], RefSet1),
+    append_set(Thing1, Thing2, RefSet1, RefSet).
+
+a :- abolish(history/1).
+l :- listing(history/1).
+n :- nodebug.
+t :- trace.
+r :- [ass3].
 
 run(S, Refs) :-
 	sentence(X, S, []), !,
