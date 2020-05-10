@@ -153,43 +153,32 @@ possessive(her, [number(singular), gender(feminine)]).
 
 % You have to write this:
 % process(LogicalForm, Ref1, Ref2).
-% process(event(Action, []), Ref1, []) :-
-%     event_assert(event(Action, _)).
 process(event(Action, [actor(Actor), object(Object)]), Ref1, Ref3) :- 
-    process_actor(Actor, Ref1, Ref2),
-    process_object(Object, Ref2, Ref3),
+    process_inner(Actor, Ref1, Ref2),
+    process_inner(Object, Ref2, Ref3),
     event_assert(event(Action, [actor(Actor), object(Object)])).
-    % X = new reference
-    % append(Ref1, [X], Ref2), 
-process_actor(thing(Name, []), _, _) :- 
+
+process_inner(thing(Name, []), _, []) :- 
     thing_assert(thing(Name, [])).
-process_actor(set(Actor1, Actor2), _, _) :- 
-    process_actor(Actor1, _, _),
-    process_actor(Actor2, _, _),
-    asserta(history(set(Actor1, Actor2))).
-process_actor(personal(Pronoun), Ref1, Ref2) :-
+process_inner(thing(Name, [object(Object)]), Ref1, Ref2) :- 
+    thing_assert(thing(Name, _)),
+    process_inner(Object, Ref1, Ref2).
+process_inner(set(Object1, Object2), Ref1, Ref3) :- 
+    process_inner(Object1, Ref1, Ref2),
+    process_inner(Object2, Ref2, Ref3),
+    asserta(history(set(Object1, Object2))).
+process_inner(personal(Pronoun), Ref1, Ref2) :-
     personal(Pronoun, Props1),
     member(number(plural), Props1),
     history(set(Thing1, Thing2)),
     append_set(Thing1, Thing2, [], RefSet),
     append(Ref1, [RefSet], Ref2).
-process_actor(personal(Pronoun), Ref1, Ref2) :-
+process_inner(personal(Pronoun), Ref1, Ref2) :-
     search_personal(Pronoun, Ref1, Ref2).
-process_actor(possessive(PPronoun, Actor), Ref1, Ref2) :-
-    search_possessive(PPronoun, Ref1, Ref2),
-    process_actor(Actor, Ref1, Ref2).
-
-process_object(thing(Name, []), _, _) :- 
-    thing_assert(thing(Name, [])).
-process_object(thing(Name, [object(Object)]), _, _) :- 
-    thing_assert(thing(Name, _)),
-    process_object(Object, _, _).
-process_object(personal(Pronoun), Ref1, Ref2) :-
-    search_personal(Pronoun, Ref1, Ref2).
-process_object(possessive(PPronoun, Object), Ref1, Ref2) :-
-    search_possessive(PPronoun, Ref1, Ref2),
-    process_object(Object, Ref1, Ref2).
-
+process_inner(possessive(PPronoun, Object), Ref1, Ref3) :-
+    process_inner(Object, Ref1, Ref2),
+    search_possessive(PPronoun, Ref2, Ref3).
+    
 thing_assert(thing(Name,_)) :-
     thing(Name, Props),
     assert(history(thing(Name,Props))).
@@ -229,7 +218,4 @@ run(S, Refs) :-
 	sentence(X, S, []), !,
 	writeln(X),
 	process(X, [], Refs),
-    % writeln(Refs),
 	listing(history/1).
-    % abolish(history/1).
-

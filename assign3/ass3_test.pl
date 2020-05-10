@@ -24,7 +24,7 @@ run([mary,gave,the,wallet,to,john], Refs).
 Refs = [].
 run([he,lost,it], Refs).
 Refs = [john, wallet].
-run([john,and,mary,looked,for,it], X).
+run([john,and,mary,looked,for,it], Refs).
 Refs = [wallet].
 run([they,found,it], Refs).
 Refs = [[john, mary], wallet].
