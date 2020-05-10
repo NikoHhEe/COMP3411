@@ -208,12 +208,6 @@ append_set(thing(Name1, _), set(Thing1, Thing2), Ref, RefSet) :-
     append(Ref, [Name1], RefSet1),
     append_set(Thing1, Thing2, RefSet1, RefSet).
 
-a :- abolish(history/1).
-l :- listing(history/1).
-n :- nodebug.
-t :- trace.
-r :- [ass3].
-
 run(S, Refs) :-
 	sentence(X, S, []), !,
 	writeln(X),
